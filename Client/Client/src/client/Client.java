@@ -17,7 +17,6 @@ public class Client {
 
     private int maxMsgSize;
     private int maxWindow;
-    private int confirmationType;
 
     public Client() {
         try {
@@ -67,16 +66,16 @@ public class Client {
         this.maxMsgSize = inUser.nextInt();
 
         System.out.println("Choose one of the options: \n1- Go Back N\n2- Selective Repeat");
-        this.confirmationType = inUser.nextInt();
+        int confirmationType = inUser.nextInt();
 
         try{
-            if(this.confirmationType == 1){
+            if(confirmationType == 1){
                 System.out.print("Max window size: ");
                 this.maxWindow = inUser.nextInt();
             }else {
                 this.maxWindow = 1;
             }
-            out.writeUTF(this.maxWindow + "|" + this.confirmationType);
+            out.writeInt(this.maxWindow);
 
             response = inServer.readUTF();
 
