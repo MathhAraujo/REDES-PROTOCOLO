@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 public class Server {
 
@@ -90,12 +89,14 @@ public class Server {
         String line, packageData;
         String[] data;
         Random rand = new Random();
+        String expectedChecksum;
+        String comparableChecksum;
         int packageIdBefore = -1;
         int packageId;
-        int packageExpectedSize;
         int windowCount = 1;
         int packageCount = 1;
-        int expectedPackages = 0;
+        int expectedPackages;
+        int checksum = 0;
 
         System.out.println();
 
@@ -111,10 +112,23 @@ public class Server {
                 data = line.split("\\|");
                 packageId = Integer.parseInt(data[0]);
                 packageData = data[1];
-                packageExpectedSize = Integer.parseInt(data[2]);
+                expectedChecksum = data[2];
                 expectedPackages = Integer.parseInt(data[3]);
 
-                if(packageData.length() != packageExpectedSize || packageId != packageIdBefore + 1) {
+                for(int i = 0; i < packageData.length(); i++) {
+                    checksum += packageData.charAt(i);
+                }
+
+                checksum = checksum * packageData.length() * expectedPackages + packageId;
+                comparableChecksum = String.valueOf(checksum);
+
+                if (comparableChecksum.length() < 4) {
+                    comparableChecksum = String.format("%04d", checksum);
+                }else{
+                    comparableChecksum = comparableChecksum.substring(comparableChecksum.length() - 4);
+                }
+
+                if(!comparableChecksum.equals(expectedChecksum) || packageId != packageIdBefore + 1) {
                     throw new Exception();
                 }
 

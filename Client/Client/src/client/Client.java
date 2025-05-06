@@ -83,6 +83,8 @@ public class Client {
 
     private void writeMessages() {
         String line, ackWindow;
+        String currentPackage;
+        String checkSumToSend;
         List<String> packageList;
         int ackValueReceived;
         int packagesToSend;
@@ -90,6 +92,7 @@ public class Client {
         int packageSize;
         int windowCount = 1;
         int packageId = 0;
+        int checksum = 0;
 
         while (true) {
             System.out.print("Write your message(Write '"+ stop_string + "' to exit): ");
@@ -108,8 +111,24 @@ public class Client {
 
             for(int i = 0; i < packageList.size(); i++){
                 try {
-                    packageSize = packageList.get(i).length();
-                    out.writeUTF(packageId + "|" + packageList.get(i) + "|" + packageSize + "|" + packagesToSend);
+                    currentPackage = packageList.get(i);
+                    packageSize = currentPackage.length();
+
+                    for(int j = 0; j < packageSize; j++){
+                        checksum += currentPackage.charAt(j);
+                    }
+                    checksum = checksum * packageSize * packagesToSend + packageId;
+                    checkSumToSend = String.valueOf(checksum);
+
+                    if(checkSumToSend.length() < 4){
+                        checkSumToSend = String.format("%04d", checksum);
+
+                    }else{
+                        checkSumToSend = String.valueOf(checksum);
+                        checkSumToSend = checkSumToSend.substring(checkSumToSend.length() - 4);
+                    }
+
+                    out.writeUTF(packageId + "|" + packageList.get(i) + "|" + checkSumToSend + "|" + packagesToSend);
                     packageId++;
 
                     if(windowCount == maxWindow || i == packageList.size() - 1){
