@@ -3,7 +3,8 @@ package server;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class Server {
 
@@ -13,11 +14,12 @@ public class Server {
     private static final int port = 3030;
     private static final String stropString = "##";
 
+    private int maxWindow;
+
     public Server() {
         try {
             server = new ServerSocket(port);
         } catch (IOException e) {
-            e.printStackTrace();
             System.out.println("Failed to create server");
         }
         initConnection();
@@ -30,20 +32,18 @@ public class Server {
             out = new DataOutputStream(clientSocket.getOutputStream());
 
         } catch (IOException e) {
-            e.printStackTrace();
             System.out.println("Failed to accept connection");
         }
 
         if(handshake()){
+            setup();
             readPackages();
         }
-        close();
     }
 
     private boolean handshake() {
         String expectedRequest = "SYN";
         String response = "ACK";
-        String successfulResponse = "Server accepts only string format with the max size of 16 characters, with 10 packages maximum";
 
         try {
             if(!expectedRequest.equals(in.readUTF())) {
@@ -52,10 +52,8 @@ public class Server {
 
             out.writeUTF(response);
             System.out.println("Successful connection");
-            out.writeUTF(successfulResponse);
 
         } catch (IOException e) {
-            e.printStackTrace();
             System.out.println("Failed handshake");
             return false;
         }
@@ -64,51 +62,88 @@ public class Server {
 
     }
 
+    private void setup(){
+
+        try {
+            this.maxWindow = in.readInt();
+            out.writeUTF("ACK");
+        }catch(IOException e){
+            System.out.println("Failed to read setup data");
+            try {
+                out.writeUTF("NaN");
+            } catch (IOException ex) {
+                System.out.println("Failed to write response");
+            }
+        }
+    }
+
     private void close() {
         try {
             in.close();
             server.close();
         } catch (IOException e) {
-            e.printStackTrace();
             System.out.println("Failed to close the server");
         }
     }
 
     private void readPackages() {
-        String line = "";
-        int recievedSize = -1;
+        String line, packageData;
+        String[] data;
+        Random rand = new Random();
         int packageIdBefore = -1;
         int packageId;
         int packageExpectedSize;
-        int packageSize;
-        while (!line.equals(stropString)) {
+        int windowCount = 1;
+        int packageCount = 1;
+        int expectedPackages = 0;
+
+        System.out.println();
+
+        while (true) {
             try {
                 line = in.readUTF();
-                System.out.println(line);
-                recievedSize = line.length();
-                packageId = Integer.parseInt(line.substring(0, 2));
-                packageSize = line.substring(2, recievedSize - 2).length();
-                packageExpectedSize = Integer.parseInt(line.substring(recievedSize-2, recievedSize));
+                if(line.equals(stropString)) {
+                    System.out.println("User ended Connection");
+                    break;
+                }
 
-                if (packageId > 9){
+                System.out.println(line);
+                data = line.split("\\|");
+                packageId = Integer.parseInt(data[0]);
+                packageData = data[1];
+                packageExpectedSize = Integer.parseInt(data[2]);
+                expectedPackages = Integer.parseInt(data[3]);
+
+                if(packageData.length() != packageExpectedSize || packageId != packageIdBefore + 1) {
                     throw new Exception();
                 }
 
-                if((packageId - 1 == packageIdBefore || packageIdBefore == -1) && (packageSize == packageExpectedSize)) {
-                    packageIdBefore = packageId;
-                    out.writeUTF("ACK " + packageId);
+                packageIdBefore = packageId;
+
+                if(windowCount == maxWindow || expectedPackages == packageCount) {
+                    out.writeUTF("ACK: " + packageCount);
+                    System.out.println("Sending ACK: " + packageCount);
+                    System.out.println("Elapsed time: " + rand.nextInt(1000) + "ms");
+                    System.out.println();
+                    windowCount = 0;
+
+                    if(packageCount >= expectedPackages) {
+                        packageCount = 0;
+
+                    }
                 }
 
+                packageCount++;
+                windowCount++;
+
             } catch (IOException e) {
-                e.printStackTrace();
                 System.out.println("Failed to read package");
-            }   catch (Exception e) {
-                e.printStackTrace();
-                System.out.println("Package limit reached");
-                break;
+            } catch (Exception e) {
+                System.out.println("Packet Loss");
             }
 
         }
+        close();
     }
 
     public static void main(String[] args) {
