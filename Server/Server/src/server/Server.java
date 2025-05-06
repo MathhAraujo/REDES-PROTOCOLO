@@ -14,6 +14,7 @@ public class Server {
     private static final String stropString = "##";
 
     private int maxWindow;
+    private int confirmationType;
 
     public Server() {
         try {
@@ -62,9 +63,13 @@ public class Server {
     }
 
     private void setup(){
-
+        String line;
         try {
-            this.maxWindow = in.readInt();
+            line = in.readUTF();
+
+            this.maxWindow = Integer.parseInt(line.split("\\|")[0]);
+            this.confirmationType = Integer.parseInt(line.split("\\|")[1]);
+
             out.writeUTF("ACK");
         }catch(IOException e){
             System.out.println("Failed to read setup data");

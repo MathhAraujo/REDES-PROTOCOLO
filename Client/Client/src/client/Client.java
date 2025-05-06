@@ -17,6 +17,7 @@ public class Client {
 
     private int maxMsgSize;
     private int maxWindow;
+    private int confirmationType;
 
     public Client() {
         try {
@@ -63,13 +64,20 @@ public class Client {
         String response;
 
         System.out.print("Max msg size: ");
-        maxMsgSize = inUser.nextInt();
+        this.maxMsgSize = inUser.nextInt();
 
-        System.out.print("Max window size: ");
-        maxWindow = inUser.nextInt();
+        System.out.println("Choose one of the options: \n1- Go Back N\n2- Selective Repeat");
+        this.confirmationType = inUser.nextInt();
 
         try{
-            out.writeInt(maxWindow);
+            if(this.confirmationType == 1){
+                System.out.print("Max window size: ");
+                this.maxWindow = inUser.nextInt();
+            }else {
+                this.maxWindow = 1;
+            }
+            out.writeUTF(this.maxWindow + "|" + this.confirmationType);
+
             response = inServer.readUTF();
 
             return response.equals("ACK");
@@ -77,7 +85,6 @@ public class Client {
         }catch (IOException e){
             return false;
         }
-
 
     }
 
